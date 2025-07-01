@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e80b3190b1f07d4f8903dc187f8dae3, type: 3}
+  m_Name: VehicleSettingsSo
+  m_EditorClassIdentifier: 
+  springRestLength: 0.8
+  springStrength: 1200
+  springDamper: 75
+  wheelsPaddingX: 0.06
+  wheelsPaddingZ: 0.12
+  steerAngle: 20
+  frontWheelsGridFactor: 0.8
+  rearWheelsGridFactor: 0.9
+  tireMass: 1
+  acceleratePower: 300
+  maxSpeed: 22
+  maxReverseSpeed: 12
+  brakePower: 1.5
+  airResistance: 5

@@ -1,16 +1,17 @@
 using System.Collections.Generic;
 using _GameAssets.Scripts.Enums;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace _GameAssets.Scripts.Player
 {
-    public class PlayerVehicleVisualController : MonoBehaviour
+    public class PlayerVehicleVisualController : NetworkBehaviour
     {
-        [SerializeField] private Transform _jeepVisualTransform;
-        [SerializeField] private Collider _playerCollider;
-        [SerializeField] private Transform _wheelFrontLeft, _wheelFrontRight, _wheelBackLeft, _wheelBackRight;
-        [SerializeField] private float _wheelsSpinSpeed, _wheelYWhenSpringMin, _wheelYWhenSpringMax;
-        [SerializeField] private ParticleSystem[] _smokeParticles;
+        [SerializeField] private Transform jeepVisualTransform;
+        [SerializeField] private Collider playerCollider;
+        [SerializeField] private Transform wheelFrontLeft, wheelFrontRight, wheelBackLeft, wheelBackRight;
+        [SerializeField] private float wheelsSpinSpeed, wheelYWhenSpringMin, wheelYWhenSpringMax;
+        [SerializeField] private ParticleSystem[] smokeParticles;
 
         private PlayerVehicleController _playerVehicleController;
         private Quaternion _wheelFrontLeftRoll;
@@ -34,8 +35,8 @@ namespace _GameAssets.Scripts.Player
         {
             _playerVehicleController = GetComponent<PlayerVehicleController>();
 
-            _wheelFrontLeftRoll = _wheelFrontLeft.localRotation;
-            _wheelFrontRightRoll = _wheelFrontRight.localRotation;
+            _wheelFrontLeftRoll = wheelFrontLeft.localRotation;
+            _wheelFrontRightRoll = wheelFrontRight.localRotation;
 
             _springsRestLength = _playerVehicleController.VehicleSettings.SpringRestLength;
             _steerAngle = _playerVehicleController.VehicleSettings.SteerAngle;
@@ -43,6 +44,7 @@ namespace _GameAssets.Scripts.Player
 
         private void Update()
         {
+            if (!IsOwner) return;
             UpdateVisualStates();
             RotateWheels();
             SetSuspension();
@@ -51,23 +53,23 @@ namespace _GameAssets.Scripts.Player
         {
             if (_springsCurrentLength[WheelType.FrontLeft] < _springsRestLength)
                 _wheelFrontLeftRoll *=
-                    Quaternion.AngleAxis(_forwardSpeed * _wheelsSpinSpeed * Time.deltaTime, Vector3.right);
+                    Quaternion.AngleAxis(_forwardSpeed * wheelsSpinSpeed * Time.deltaTime, Vector3.right);
 
             if (_springsCurrentLength[WheelType.FrontRight] < _springsRestLength)
                 _wheelFrontRightRoll *=
-                    Quaternion.AngleAxis(_forwardSpeed * _wheelsSpinSpeed * Time.deltaTime, Vector3.right);
+                    Quaternion.AngleAxis(_forwardSpeed * wheelsSpinSpeed * Time.deltaTime, Vector3.right);
 
             if (_springsCurrentLength[WheelType.BackLeft] < _springsRestLength)
-                _wheelBackLeft.localRotation *=
-                    Quaternion.AngleAxis(_forwardSpeed * _wheelsSpinSpeed * Time.deltaTime, Vector3.right);
+                wheelBackLeft.localRotation *=
+                    Quaternion.AngleAxis(_forwardSpeed * wheelsSpinSpeed * Time.deltaTime, Vector3.right);
 
             if (_springsCurrentLength[WheelType.BackRight] < _springsRestLength)
-                _wheelBackRight.localRotation *=
-                    Quaternion.AngleAxis(_forwardSpeed * _wheelsSpinSpeed * Time.deltaTime, Vector3.right);
+                wheelBackRight.localRotation *=
+                    Quaternion.AngleAxis(_forwardSpeed * wheelsSpinSpeed * Time.deltaTime, Vector3.right);
 
-            _wheelFrontLeft.localRotation =
+            wheelFrontLeft.localRotation =
                 Quaternion.AngleAxis(_steerInput * _steerAngle, Vector3.up) * _wheelFrontLeftRoll;
-            _wheelFrontRight.localRotation =
+            wheelFrontRight.localRotation =
                 Quaternion.AngleAxis(_steerInput * _steerAngle, Vector3.up) * _wheelFrontRightRoll;
         }
 
@@ -78,21 +80,21 @@ namespace _GameAssets.Scripts.Player
             var springBackLeftRatio = _springsCurrentLength[WheelType.BackLeft] / _springsRestLength;
             var springBackRightRatio = _springsCurrentLength[WheelType.BackRight] / _springsRestLength;
 
-            _wheelFrontLeft.localPosition = new Vector3(_wheelFrontLeft.localPosition.x,
-                _wheelYWhenSpringMin + (_wheelYWhenSpringMax - _wheelYWhenSpringMin) * springFrontLeftRatio,
-                _wheelFrontLeft.localPosition.z);
+            wheelFrontLeft.localPosition = new Vector3(wheelFrontLeft.localPosition.x,
+                wheelYWhenSpringMin + (wheelYWhenSpringMax - wheelYWhenSpringMin) * springFrontLeftRatio,
+                wheelFrontLeft.localPosition.z);
 
-            _wheelFrontRight.localPosition = new Vector3(_wheelFrontRight.localPosition.x,
-                _wheelYWhenSpringMin + (_wheelYWhenSpringMax - _wheelYWhenSpringMin) * springFrontRightRatio,
-                _wheelFrontRight.localPosition.z);
+            wheelFrontRight.localPosition = new Vector3(wheelFrontRight.localPosition.x,
+                wheelYWhenSpringMin + (wheelYWhenSpringMax - wheelYWhenSpringMin) * springFrontRightRatio,
+                wheelFrontRight.localPosition.z);
 
-            _wheelBackRight.localPosition = new Vector3(_wheelBackRight.localPosition.x,
-                _wheelYWhenSpringMin + (_wheelYWhenSpringMax - _wheelYWhenSpringMin) * springBackRightRatio,
-                _wheelBackRight.localPosition.z);
+            wheelBackRight.localPosition = new Vector3(wheelBackRight.localPosition.x,
+                wheelYWhenSpringMin + (wheelYWhenSpringMax - wheelYWhenSpringMin) * springBackRightRatio,
+                wheelBackRight.localPosition.z);
 
-            _wheelBackLeft.localPosition = new Vector3(_wheelBackLeft.localPosition.x,
-                _wheelYWhenSpringMin + (_wheelYWhenSpringMax - _wheelYWhenSpringMin) * springBackLeftRatio,
-                _wheelBackLeft.localPosition.z);
+            wheelBackLeft.localPosition = new Vector3(wheelBackLeft.localPosition.x,
+                wheelYWhenSpringMin + (wheelYWhenSpringMax - wheelYWhenSpringMin) * springBackLeftRatio,
+                wheelBackLeft.localPosition.z);
         }
 
         private void UpdateVisualStates()

@@ -2,13 +2,15 @@ using System.Collections.Generic;
 using _GameAssets.Scripts.Enums;
 using _GameAssets.Scripts.Extensions;
 using _GameAssets.Scripts.ScriptableObjects;
+using Cysharp.Threading.Tasks;
+using Unity.Netcode;
 using UnityEngine;
 using Quaternion = UnityEngine.Quaternion;
 using Vector3 = UnityEngine.Vector3;
 
 namespace _GameAssets.Scripts.Player
 {
-    public class PlayerVehicleController : MonoBehaviour
+    public class PlayerVehicleController : NetworkBehaviour
     {
         private class SpringData
         {
@@ -21,15 +23,12 @@ namespace _GameAssets.Scripts.Player
         public Vector3 VehicleForward => _vehicleTransform.forward;
         public Vector3 Velocity => vehicleRigidbody.linearVelocity;
         #endregion
-
         #region Serialized Fields
         [Header("References")] 
         [SerializeField] private VehicleSettingsSo vehicleSettings;
         [SerializeField] private Rigidbody vehicleRigidbody;
         [SerializeField] private BoxCollider vehicleCollider;
         #endregion        
-        
-
         #region Private Fields
         private static readonly WheelType[] Wheels = new WheelType[]
         {
@@ -47,8 +46,7 @@ namespace _GameAssets.Scripts.Player
         private float _steerInput;
         private float _accelerateInput;
         #endregion
-        
-
+        #region Unity Methods
         private void Awake()
         {
             _vehicleTransform = transform;
@@ -59,81 +57,31 @@ namespace _GameAssets.Scripts.Player
                 _springData.Add(wheel, new());
             }
         }
-        
-
+        public override void OnNetworkSpawn()
+        {
+            vehicleRigidbody.isKinematic = true;
+            SetOwnerRigidbodyAsync();
+        }
         private void Update()
         {
-
+            if (!IsOwner) return;
             SetSteerInput(Input.GetAxis("Horizontal"));
             SetAccelerateInput(Input.GetAxis("Vertical"));
         }
 
         private void FixedUpdate()
         {
+            if (!IsOwner) return;
             UpdateSuspension();
             UpdateSteering();
             UpdateAccelerate();
             UpdateBreaks();
             UpdateAirResistance();
         }
-        private void UpdateAirResistance()
-        {
-            vehicleRigidbody.AddForce(vehicleCollider.size.magnitude * vehicleSettings.AirResistance * -vehicleRigidbody.linearVelocity);
-        }
-        private void UpdateBreaks()
-        {
-            float forwardSpeed = Vector3.Dot(_vehicleTransform.forward, vehicleRigidbody.linearVelocity);
-            float speed = Mathf.Abs(forwardSpeed);
+        #endregion
+        #region Helper Methods
 
-            float brakesRatio;
-
-            const float ALMOST_STOPPING_SPEED = 2.0f;
-            
-            bool almostStopping = speed < ALMOST_STOPPING_SPEED;
-            if (almostStopping)
-            {
-                brakesRatio = 1.0f;
-            }
-            else
-            {
-                bool accelerateContrary =
-                    !Mathf.Approximately(_accelerateInput, 0.0f) &&
-                    Vector3.Dot(_accelerateInput * _vehicleTransform.forward, vehicleRigidbody.linearVelocity) < 0.0f;
-                if (accelerateContrary)
-                {
-                    brakesRatio = 1.0f;
-                }
-                // NO ACCELERATE INPUT
-                else if (Mathf.Approximately(_accelerateInput, 0.0f))
-                {
-                    brakesRatio = 0.1f;
-                }
-                else
-                {
-                    return;
-                }
-            }
-
-            foreach (WheelType wheel in BackWheels)
-            {
-                if (!IsGrounded(wheel))
-                {
-                    continue;
-                }
-
-                Vector3 springPosition = GetSpringPosition(wheel);
-                Vector3 rollDirection = GetWheelRollDirection(wheel);
-                float rollVelocity = Vector3.Dot(rollDirection, vehicleRigidbody.GetPointVelocity(springPosition));
-
-                float desiredVelocityChange = -rollVelocity * vehicleSettings.BrakePower * brakesRatio;
-                float desiredAcceleration = desiredVelocityChange / Time.fixedDeltaTime;
-
-                Vector3 force = desiredAcceleration * vehicleSettings.TireMass * rollDirection;
-                vehicleRigidbody.AddForceAtPosition(force, GetWheelTorquePosition(wheel));
-            }
-        }
-
-        private void SetSteerInput(float steerInput)
+         private void SetSteerInput(float steerInput)
         {
             _steerInput = Mathf.Clamp(steerInput, -1.0f, 1.0f);
         }
@@ -257,6 +205,8 @@ namespace _GameAssets.Scripts.Player
             return _springData[wheel].CurrentLength < vehicleSettings.SpringRestLength;
         }
 
+        #endregion
+        #region Car State Methods
         private void UpdateSuspension()
         {
             foreach (WheelType id in _springData.Keys)
@@ -272,7 +222,62 @@ namespace _GameAssets.Scripts.Player
                 vehicleRigidbody.AddForceAtPosition(force * _vehicleTransform.up, GetSpringPosition(id));
             }
         }
+        private void UpdateAirResistance()
+        {
+            vehicleRigidbody.AddForce(vehicleCollider.size.magnitude * vehicleSettings.AirResistance * -vehicleRigidbody.linearVelocity);
+        }
+        private void UpdateBreaks()
+        {
+            float forwardSpeed = Vector3.Dot(_vehicleTransform.forward, vehicleRigidbody.linearVelocity);
+            float speed = Mathf.Abs(forwardSpeed);
 
+            float brakesRatio;
+
+            const float ALMOST_STOPPING_SPEED = 2.0f;
+            
+            bool almostStopping = speed < ALMOST_STOPPING_SPEED;
+            if (almostStopping)
+            {
+                brakesRatio = 1.0f;
+            }
+            else
+            {
+                bool accelerateContrary =
+                    !Mathf.Approximately(_accelerateInput, 0.0f) &&
+                    Vector3.Dot(_accelerateInput * _vehicleTransform.forward, vehicleRigidbody.linearVelocity) < 0.0f;
+                if (accelerateContrary)
+                {
+                    brakesRatio = 1.0f;
+                }
+                // NO ACCELERATE INPUT
+                else if (Mathf.Approximately(_accelerateInput, 0.0f))
+                {
+                    brakesRatio = 0.1f;
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            foreach (WheelType wheel in BackWheels)
+            {
+                if (!IsGrounded(wheel))
+                {
+                    continue;
+                }
+
+                Vector3 springPosition = GetSpringPosition(wheel);
+                Vector3 rollDirection = GetWheelRollDirection(wheel);
+                float rollVelocity = Vector3.Dot(rollDirection, vehicleRigidbody.GetPointVelocity(springPosition));
+
+                float desiredVelocityChange = -rollVelocity * vehicleSettings.BrakePower * brakesRatio;
+                float desiredAcceleration = desiredVelocityChange / Time.fixedDeltaTime;
+
+                Vector3 force = desiredAcceleration * vehicleSettings.TireMass * rollDirection;
+                vehicleRigidbody.AddForceAtPosition(force, GetWheelTorquePosition(wheel));
+            }
+        }
         private void UpdateSteering()
         {
             foreach (WheelType wheel in Wheels)
@@ -310,7 +315,7 @@ namespace _GameAssets.Scripts.Player
             {
                 return;
             }
-            else if (!movingForward && speed > vehicleSettings.MaxReverseSpeed)
+            if (!movingForward && speed > vehicleSettings.MaxReverseSpeed)
             {
                 return;
             }
@@ -327,6 +332,13 @@ namespace _GameAssets.Scripts.Player
                 vehicleRigidbody.AddForceAtPosition(_accelerateInput * vehicleSettings.AcceleratePower * wheelForward,
                     position);
             }
+        }
+        #endregion
+        
+        private async void SetOwnerRigidbodyAsync()
+        {
+            if (IsOwner) await UniTask.DelayFrame(1);
+            vehicleRigidbody.isKinematic = false;
         }
     }
 }

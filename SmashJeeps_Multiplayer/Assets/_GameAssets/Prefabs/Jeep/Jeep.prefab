@@ -797,6 +797,7 @@ GameObject:
   - component: {fileID: 2036913338313826301}
   - component: {fileID: 5141699818548776489}
   - component: {fileID: 5081967341738020660}
+  - component: {fileID: 5410881814754814302}
   - component: {fileID: 2612644187426968492}
   - component: {fileID: 4383761999541546766}
   - component: {fileID: 5890008984742049247}
@@ -965,6 +966,18 @@ MonoBehaviour:
   vehicleSettings: {fileID: 11400000, guid: 63fc9850d1e1a204ba40e0a76658edb0, type: 2}
   vehicleRigidbody: {fileID: 5890008984742049247}
   vehicleCollider: {fileID: 4383761999541546766}
+--- !u!114 &5410881814754814302
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2370510411822829483}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3c4b22afde586341b66fa4f162f9589, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!135 &2612644187426968492
 SphereCollider:
   m_ObjectHideFlags: 0
